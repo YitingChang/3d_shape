@@ -300,7 +300,7 @@ class ModelNet40(Dataset):
 def load_data_vh():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     DATA_DIR = os.path.join(BASE_DIR, 'data')
-    h5_name = os.path.join(DATA_DIR, 'vhObject_ply_hdf5_1024', 'ply_data_all.h5')
+    h5_name = os.path.join(DATA_DIR, 'vhObject_ply_hdf5_1024', 'ply_data_axial_component.h5')
     f = h5py.File(h5_name, 'r+')
     all_data = f['data'][:].astype('float32')
     all_label = f['label'][:].astype('int64')

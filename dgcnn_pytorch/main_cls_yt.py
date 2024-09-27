@@ -273,10 +273,11 @@ def test_layer_vh(args, io):
     model.load_state_dict(torch.load(args.model_path))
     model = model.eval()
 
-    ## Get true labels and corresponding outputs
+    ## Get vhObject labels (ac, torso, sheet), ModelNet40 prediction, and layer outputs
     test_labels = []
     test_layer_outputs = []
-
+    test_pred = []
+	
     ####### Get output from a middle layer #######
     def hook_fn(module, input, output):
         # Save the output of the hooked layer
@@ -297,17 +298,22 @@ def test_layer_vh(args, io):
         test_labels.append(label.cpu().numpy())
 
         # Forward pass
-        _ = model(data)  # This will trigger the hook and store the output
+        logits = model(data)  # This will trigger the hook and store the output
+        preds = logits.max(dim=1)[1]
+        test_pred.append(preds.detach().cpu().numpy())
         
+    test_pred = np.concatenate(test_pred)
+    np.save('layer_outputs/vhObject/axial_component/modelnet_pred.npy', test_pred)
+    
     test_labels = np.concatenate(test_labels)
-    np.save('layer_outputs/vhObject/axial_component/test_labels.npy', test_labels)
+    np.save('layer_outputs/vhObject/axial_component/vhObject_label.npy', test_labels)
 
     # Save the second-to-last layer outputs
     test_layer_outputs = np.concatenate(test_layer_outputs, axis=0)  # Combine outputs from all batches
     np.save('layer_outputs/vhObject/axial_component/second-to-last_layer_outputs.npy', test_layer_outputs)
 
 
-    print(f"Saved true labels and desired layer outputs.")
+    print(f"Saved prediction and desired layer outputs.")
     # Remove the hook after the test
     hook_handle.remove()
 
