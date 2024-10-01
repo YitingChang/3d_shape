@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import open3d as o3d
 
 # Data structure
 # Shapes/stl/axial_component/axia_component_000.stl
@@ -11,7 +12,7 @@ import os
 
 ### Setting ###
 main_dir = r'/home/yiting/Documents/Data/Shapes'
-num_points = 1024
+num_points = 2048
 
 # Get the mesh (stl) folder
 mesh_file_path = os.path.join(main_dir, 'stl')
