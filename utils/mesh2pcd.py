@@ -12,30 +12,31 @@ import open3d as o3d
 
 ### Setting ###
 main_dir = r'/home/yiting/Documents/Data/Shapes'
-num_points = 2048
+num_points = 1024
 
-# Get the mesh (stl) folder
-mesh_file_path = os.path.join(main_dir, 'stl')
+# Get the input mesh (stl) folder
+input_folder_dir = os.path.join(main_dir, 'stl_no_base')
 # Get the category folders
-category_folders = os.listdir(mesh_file_path)
-# Create a point cloud (ply) folder
-os.makedirs(os.path.join(main_dir, 'ply'), exist_ok = True)
+category_folders = os.listdir(input_folder_dir)
+# Create an output point cloud (ply) folder
+output_folder_dir = os.path.join(main_dir, f"ply_{num_points}_no_base")
+os.makedirs(output_folder_dir, exist_ok = True)
 
 for cat in category_folders:
     # input
-    stl_category_path = os.path.join(main_dir, 'stl',cat)
+    input_category_dir = os.path.join(input_folder_dir, cat)
     # output
-    ply_category_path = os.path.join(main_dir, 'ply',cat)
-    os.makedirs(ply_category_path,exist_ok = True)
-    mesh_files = os.listdir(stl_category_path)
-    for me in mesh_files:
-        mesh = o3d.io.read_triangle_mesh(os.path.join(stl_category_path,me))
+    output_category_dir = os.path.join(output_folder_dir,cat)
+    os.makedirs(output_category_dir, exist_ok = True)
+    input_files = os.listdir(input_category_dir)
+    for input in input_files:
+        mesh = o3d.io.read_triangle_mesh(os.path.join(input_category_dir, input))
         # Function to uniformly sample points from the mesh.
         pcd = mesh.sample_points_uniformly(number_of_points=num_points)
         # Get file name
-        root, ext = os.path.splitext(me)
+        root, ext = os.path.splitext(input)
         # Save the point cloud in PLY format
-        o3d.io.write_point_cloud(os.path.join(ply_category_path, root + '.ply'), pcd)
+        o3d.io.write_point_cloud(os.path.join(output_category_dir, f"{root}.ply"), pcd)
 
 
 

@@ -27,7 +27,7 @@ def resnet50_vh(img):
 if __name__ == "__main__":
     ## Setting 
     # Get the 2D image (png) folder
-    main_dir = r'/home/yiting/Documents/Data/Shapes/png'
+    main_dir = r'/home/yiting/Documents/Data/Shapes/png_no_base'
     # Save dir
     save_dir = r'/home/yiting/Documents/Shape_analysis/resnet50_vh'
     # Get the category folders
