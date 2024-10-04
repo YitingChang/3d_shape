@@ -255,13 +255,14 @@ def test_layer_modelnet(args, io):
     # Remove the hook after the test
     hook_handle.remove()
 
-def test_layer_vh(args, io):
-    test_loader = DataLoader(vhObject(num_points=args.num_points),
+def test_layer_vh(args, save_dir):
+    vh_cat=args.vh_cat
+    test_loader = DataLoader(vhObject(vh_cat=vh_cat, num_points=args.num_points),
                              batch_size=args.test_batch_size, shuffle=True, drop_last=False)
 
     device = torch.device("cuda" if args.cuda else "cpu")
 
-    #Try to load models
+    # Load models
     if args.model == 'pointnet':
         model = PointNet(args).to(device)
     elif args.model == 'dgcnn':
@@ -273,15 +274,17 @@ def test_layer_vh(args, io):
     model.load_state_dict(torch.load(args.model_path))
     model = model.eval()
 
-    ## Get vhObject labels (ac, torso, sheet), ModelNet40 prediction, and layer outputs
-    test_labels = []
-    test_layer_outputs = []
-    test_pred = []
+    ## Get vhObject labels (ac, torso, sheet), ModelNet40 prediction, confidence score, and layer outputs
+    vh_labels = []
+    layer_outputs = []
+    pred_classes = []
+    confidence_scores = []
+    obj_names = []
 	
     ####### Get output from a middle layer #######
     def hook_fn(module, input, output):
         # Save the output of the hooked layer
-        test_layer_outputs.append(output.detach().cpu().numpy())  # Save on CPU memory to avoid GPU overload
+        layer_outputs.append(output.detach().cpu().numpy())  # Save on CPU memory to avoid GPU overload
 
     # Unwrap the model if using DataParallel
     if isinstance(model, torch.nn.DataParallel):
@@ -291,27 +294,34 @@ def test_layer_vh(args, io):
     # hook_handle = model.conv5.register_forward_hook(hook_fn)  # For example, first layer: conv1
     hook_handle = model.linear2.register_forward_hook(hook_fn)  # For example, second-to-last layer: linear2
     
-    for data, label in test_loader:
-        data, label = data.to(device), label.to(device).squeeze()
+    for data, label, name in test_loader:
+        # data, label = data.to(device), label.to(device).squeeze()
+        data = data.to(device)
         data = data.permute(0, 2, 1)
 
-        test_labels.append(label.cpu().numpy())
-
+        vh_labels.append(label)
+        obj_names.append(name)
         # Forward pass
         logits = model(data)  # This will trigger the hook and store the output
-        preds = logits.max(dim=1)[1]
-        test_pred.append(preds.detach().cpu().numpy())
-        
-    test_pred = np.concatenate(test_pred)
-    np.save('layer_outputs/vhObject/axial_component/modelnet_pred.npy', test_pred)
-    
-    test_labels = np.concatenate(test_labels)
-    np.save('layer_outputs/vhObject/axial_component/vhObject_label.npy', test_labels)
 
-    # Save the second-to-last layer outputs
-    test_layer_outputs = np.concatenate(test_layer_outputs, axis=0)  # Combine outputs from all batches
-    np.save('layer_outputs/vhObject/axial_component/second-to-last_layer_outputs.npy', test_layer_outputs)
+        # Get predicted class and corresponding confidence score
+        pred_class = logits.max(dim=1)[1]  # Predicted class index
+        probs = F.softmax(logits, dim=1)  # Apply softmax to get probabilities
+        confidence_score = torch.max(probs, dim=1)[0]  # Confidence score (probability) of the predicted class
 
+        pred_classes.append(pred_class.detach().cpu().numpy())
+        confidence_scores.append(confidence_score.detach().cpu().numpy())
+
+    # Save the object names, classification and score outputs as .npy file
+    data = {
+        'object_name': np.concatenate(obj_names),
+        'class_id' : np.concatenate(pred_classes),
+        'score': np.concatenate(confidence_scores),
+        'vhObject_cat': np.concatenate(vh_labels),
+        'second-to-last_layer_outputs': np.concatenate(layer_outputs, axis=0)  # Combine outputs from all batches
+        }
+    save_file = os.path.join(save_dir, f"dgcnn_cls_{vh_cat}.npy")
+    np.save(save_file, data)   
 
     print(f"Saved prediction and desired layer outputs.")
     # Remove the hook after the test
@@ -359,7 +369,10 @@ if __name__ == "__main__":
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Pretrained model path')
     parser.add_argument('--eval_layer', type=bool,  default=False,
-                    help='evaluate a layer of the model')
+                    help='Evaluate a layer of the model')
+    parser.add_argument('--vh_cat', type=str, default='axial_component', metavar='N',
+                        choices=['axial_component', 'torso', 'sheet', 'all'],
+                        help='vhObject category, [axial_component, torso, sheet]')
     args = parser.parse_args()
 
     _init_()
@@ -385,5 +398,6 @@ if __name__ == "__main__":
             if args.dataset == 'modelnet40':
                 test_layer_modelnet(args, io)
             elif args.dataset == 'vhObject':
-                test_layer_vh(args, io)
+                save_dir = r'/home/yiting/Documents/Shape_analysis/dgcnn_vh'
+                test_layer_vh(args, save_dir)
 

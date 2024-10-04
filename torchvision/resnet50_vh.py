@@ -37,19 +37,23 @@ if __name__ == "__main__":
         # Get input file
         png_category_path = os.path.join(main_dir,cat)
         png_files = os.listdir(png_category_path)
-
+        png_files = sorted(png_files)
+        
         # Get Resnet50 classification outputs
         class_outputs = []
         score_outputs = []
-
+        object_names = []
         for png_file in png_files:
             img = read_image(os.path.join(png_category_path, png_file))
             class_id, score = resnet50_vh(img)
+            root, ext = os.path.splitext(png_file)
+
             class_outputs.append(class_id)
             score_outputs.append(score)
+            object_names.append(root)
         
-        # Save the classification and score outputs as .npy file
-        data = {'class_id' : np.array(class_outputs), 'score': np.array(score_outputs)}
+        # Save the object names, classification and score outputs as .npy file
+        data = {'object_name': np.array(object_names),'class_id' : np.array(class_outputs), 'score': np.array(score_outputs)}
         save_file = os.path.join(save_dir, f"resnet50_{cat}.npy")
         np.save(save_file, data)
     

@@ -28,12 +28,12 @@ def plot_class_hist(data, vh_cat_name, main_dir):
     axs[1].set_xlabel('Score')
     axs[1].set_ylabel('Number of objects')
 
-    # Save the plot as an image (optional)
+    # Save the plot as an image
     fig.savefig(os.path.join(main_dir, "results", f"histogram_prediction_{vh_cat_name}.png"), dpi=300, bbox_inches='tight')
 
     print(f"Plots have been saved to 'histogram_prediction_{vh_cat_name}.png'.")
 
-def get_ImageNet_cat_name(data, vh_cat_name, main_dir):
+def get_ImageNet_cat_name_hist(data, vh_cat_name, main_dir):
 
     # Get class_id
     class_id_all = data['class_id']
@@ -59,12 +59,35 @@ def get_ImageNet_cat_name(data, vh_cat_name, main_dir):
 
     print(f"Results have been saved to 'histogram_prediction_{vh_cat_name}.txt'.")
 
+def get_ImageNet_cat_name(data, vh_cat_name, main_dir,):
+
+    # Get object name, class_id and score of a object
+    class_id_all = data['class_id']
+    score_all = data['score']*100
+    object_name_all = data['object_name']
+
+    # Get category names
+    weights = ResNet50_Weights.DEFAULT
+    ImageNet_categories = weights.meta["categories"]
+
+    # Open a .txt file to save the results
+    txt_file = os.path.join(main_dir, "results", f"class_prediction_{vh_cat_name}.txt")
+    with open(txt_file, "w") as file:
+        for idx, (name, class_id, score) in enumerate(zip(object_name_all, class_id_all, score_all)):
+            class_name = ImageNet_categories[class_id] # ImageNet class name
+            rounded_score = round(score, 1)
+            # Write to the file
+            file.write(f"{name}:{class_name}({rounded_score})\n")            
+
+    print(f"Results have been saved to 'class_prediction_{vh_cat_name}.txt'.")
+
 if __name__ == "__main__":
     ## Setting 
     main_dir = r'/home/yiting/Documents/Shape_analysis/resnet50_vh'
-    vh_cat_names = ["axial_component", "torso", "sheet"]
+    vh_cat_names = ["axial_component", "torso", "sheet", "all"]
 
     for vh_cat in vh_cat_names:
         data = np.load(os.path.join(main_dir, f"resnet50_{vh_cat}.npy"), allow_pickle=True).item()
         plot_class_hist(data, vh_cat, main_dir)
+        get_ImageNet_cat_name_hist(data, vh_cat, main_dir)
         get_ImageNet_cat_name(data, vh_cat, main_dir)

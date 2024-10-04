@@ -297,30 +297,32 @@ class ModelNet40(Dataset):
         return self.data.shape[0]
     
 ##################### vh_Object #####################    
-def load_data_vh():
+def load_data_vh(vh_cat):
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     DATA_DIR = os.path.join(BASE_DIR, 'data')
-    h5_name = os.path.join(DATA_DIR, 'vhObject_ply_hdf5_1024', 'ply_data_axial_component.h5')
+    h5_name = os.path.join(DATA_DIR, 'vhObject_ply_hdf5_1024', f"ply_data_{vh_cat}.h5")
     f = h5py.File(h5_name, 'r+')
-    all_data = f['data'][:].astype('float32')
-    all_label = f['label'][:].astype('int64')
+    data_all = f['data'][:].astype('float32')
+    label_all = f['label'][:].astype('int64')
+    name_all = f['name'][:].astype('str')
 
-    return all_data, all_label
+    return data_all, label_all, name_all 
 
 class vhObject(Dataset):
-    def __init__(self, num_points):
-        self.data, self.label = load_data_vh()
+    def __init__(self, vh_cat, num_points):
+        self.data, self.label, self.name = load_data_vh(vh_cat)
         self.num_points = num_points
 
     def __getitem__(self, item):
         pointcloud = self.data[item][:self.num_points]
         label = self.label[item]
-        return pointcloud, label
+        name = self.name[item]
+        return pointcloud, label, name
 
     def __len__(self):
         return self.data.shape[0]
     
-##################### vh_Object #####################       
+##################### End #####################       
 
 class ShapeNetPart(Dataset):
     def __init__(self, num_points, partition='train', class_choice=None):

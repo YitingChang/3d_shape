@@ -7,7 +7,7 @@ import h5py
 import numpy as np
 
 
-def mesh_preprocess(stl_file_path):
+def mesh_preprocess(input_file_path):
     # Load PLY file
     ply_data = PlyData.read(input_file_path)
 
@@ -37,7 +37,7 @@ def mesh_preprocess(stl_file_path):
     return vertices, label, normals
 
 # Write numpy array data and label to h5_filename
-def save_h5(h5_filename, data, label, normal, data_dtype='uint8', label_dtype='uint8', normal_dtype='uint8'):
+def save_h5(h5_filename, data, label, normal, name, data_dtype='uint8', label_dtype='uint8', normal_dtype='uint8', name_dtype='S25'):
     h5_fout = h5py.File(h5_filename, "w")
     h5_fout.create_dataset(
             'data', data=data,
@@ -51,6 +51,14 @@ def save_h5(h5_filename, data, label, normal, data_dtype='uint8', label_dtype='u
             'normal', data=normal,
             compression='gzip', compression_opts=4,
             dtype=normal_dtype)
+    
+    # Convert Unicode strings to byte strings before saving
+    name_bytes = np.array([n.encode('utf-8') for n in name], dtype=name_dtype)
+
+    h5_fout.create_dataset(
+            'name', data=name_bytes,
+            compression='gzip', compression_opts=4,
+            dtype=name_dtype)
     h5_fout.close()
 
 
@@ -72,33 +80,29 @@ if __name__ == "__main__":
         data_all = []
         label_all = []
         normal_all = []
+        name_all = []
         file_name = f"ply_data_{cat}.h5"
 
         for input in input_files:
-
             input_file_path = os.path.join(input_category_dir, input)
             vertices, label, normals = mesh_preprocess(input_file_path)
-            
+            name, ext = os.path.splitext(input)
+
             # Append the data to lists
             data_all.append(vertices)
             label_all.append(label)
             normal_all.append(normals)
-
+            name_all.append(name)
 
         # Convert lists to NumPy arrays
         data_all = np.array(data_all)  # Shape: (X, N, 3) where X is the number of ply objects and N is the number of vertices in each PLY
         label_all = np.array(label_all) 
+        name_all = np.array(name_all)
 
         # If normal_all is not empty, concatenate into a NumPy array
         normal_all = np.array(normal_all) if normal_all else None  # Shape: (X, N, 3) if normals are present
 
-        # Output the shapes of the arrays
-        print(f"Processed {cat} objects")
-        print("Data shape:", data_all.shape)
-        print("Label shape:", label_all.shape)
-        print("Normal shape:", normal_all.shape if normal_all is not None else 'No normals')
-
         h5_file_path = os.path.join(output_dir, file_name)
-        save_h5(h5_file_path, data_all, label_all, normal_all)
+        save_h5(h5_file_path, data_all, label_all, normal_all, name_all)
         print(f"Saved: {h5_file_path}")
 
